@@ -17,6 +17,69 @@ sampleALU/
 └── README.md                   # This file
 ```
 
+## System Architecture Diagram
+
+```
+                    PARAMETRIZED ADDER (8/16/32-bit)
+                    ┌────────────────────────────────┐
+                    │  parametrized_adder<BitWidth>  │
+   a ──────────────►│                                ├──────► sum
+                    │ • Performs signed addition     │
+   b ──────────────►│ • Detects overflow/underflow   ├──────► overflow_flag
+                    │ • Saturates result to range    │
+                    │                                ├──────► underflow_flag
+                    └────────────────────────────────┘
+
+
+               ╔════════════════════════════════════════════════╗
+               ║                                                ║
+               ║         ALU (MAIN COMPUTE UNIT)                ║
+               ║      ┌──────────────────────────────┐          ║
+               ║      │     alu<BitWidth>            │          ║
+               ║      │                              │          ║
+operand_a ────►├─────►│  Input Ports:                │          ║
+               ║      │  • operand_a (signed int)    │          ║
+operand_b ────►├─────►│  • operand_b (signed int)    │          ║
+               ║      │  • operation[1:0] (selector) │          ║
+               ║      │                              │          ║
+operation[1:0]►├─────►│  Core Logic:                 │          ║
+(0=ADD, 1=SUB) ║      │  • Operation Multiplexer     │          ║
+               ║      │  • Arithmetic Execution      │          ║
+               ║      │  • Saturation Logic          │          ║
+               ║      │  • Flag Generator            │          ║
+               ║      │                              │          ║
+               ║      │  Output Ports:               │          ║
+               ║      │  • result                    ├─────────►result
+               ║      │  • zero_flag                 ├─────────►zero_flag
+               ║      │  • sign_flag                 ├─────────►sign_flag
+               ║      │  • overflow_flag             ├─────────►overflow_flag
+               ║      │  • underflow_flag            ├─────────►underflow_flag
+               ║      │  • carry_flag                ├─────────►carry_flag
+               ║      │                              │          ║
+               ║      └──────────────────────────────┘          ║
+               ║                                                ║
+               ╚════════════════════════════════════════════════╝
+
+OPERATION SELECTOR (operation[1:0]):
+  • 0 (0b00): ADD      → result = operand_a + operand_b
+  • 1 (0b01): SUBTRACT → result = operand_a - operand_b
+  • 2 (0b10): Reserved → defaults to ADD
+  • 3 (0b11): Reserved → defaults to ADD
+
+OUTPUT FLAGS:
+  • result:         Saturated arithmetic result
+  • zero_flag:      1 when result = 0
+  • sign_flag:      1 when result < 0
+  • overflow_flag:  1 when result exceeds max value (saturation triggered)
+  • underflow_flag: 1 when result below min value (saturation triggered)
+  • carry_flag:     1 on any overflow/underflow condition
+
+SUPPORTED BIT WIDTHS (Template Parameter):
+  • 8-bit:  Range [-128, 127]
+  • 16-bit: Range [-32768, 32767]
+  • 32-bit: Range [-2147483648, 2147483647]
+```
+
 ## Components
 
 ### 1. Parametrized Adder (`parametrized_adder.h`)
