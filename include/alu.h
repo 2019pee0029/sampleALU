@@ -10,6 +10,12 @@
 // Operations: 
 //   - 0: ADD
 //   - 1: SUBTRACT
+//   - 2: AND (bitwise)
+//   - 3: OR (bitwise)
+//   - 4: XOR (bitwise)
+//   - 5: LEFT SHIFT
+//   - 6: RIGHT SHIFT (arithmetic for signed)
+//   - 7: Reserved
 
 template <int BitWidth>
 SC_MODULE(alu)
@@ -22,8 +28,8 @@ SC_MODULE(alu)
 
     // Input ports
     sc_in<DataType>      operand_a;     // First operand
-    sc_in<DataType>      operand_b;     // Second operand
-    sc_in<sc_uint<2>>    operation;     // Operation select: 0=ADD, 1=SUBTRACT, 2-3=Reserved
+    sc_in<DataType>      operand_b;     // Second operand / Shift amount
+    sc_in<sc_uint<3>>    operation;     // Operation select: 0=ADD, 1=SUB, 2=AND, 3=OR, 4=XOR, 5=SHL, 6=SHR, 7=Reserved
     
     // Output ports
     sc_out<DataType>     result;         // Result (saturated if overflow/underflow)
@@ -45,7 +51,7 @@ SC_MODULE(alu)
     {
         DataType a_val = operand_a.read();
         DataType b_val = operand_b.read();
-        sc_uint<2> op = operation.read();
+        sc_uint<3> op = operation.read();
         
         // Get the range for this data type
         constexpr DataType MIN_VAL = std::numeric_limits<DataType>::min();
@@ -55,27 +61,47 @@ SC_MODULE(alu)
         int64_t result_extended = 0;
         bool ov = false;
         bool uf = false;
+        bool is_arithmetic = false;  // Flag for overflow-sensitive operations
         
         // Perform selected operation
         switch(op)
         {
             case 0: // ADD
+                is_arithmetic = true;
                 result_extended = static_cast<int64_t>(a_val) + static_cast<int64_t>(b_val);
                 break;
             case 1: // SUBTRACT
+                is_arithmetic = true;
                 result_extended = static_cast<int64_t>(a_val) - static_cast<int64_t>(b_val);
                 break;
-            case 2: // Reserved - default to ADD
-                result_extended = static_cast<int64_t>(a_val) + static_cast<int64_t>(b_val);
+            case 2: // AND (bitwise)
+                result_extended = static_cast<int64_t>(a_val) & static_cast<int64_t>(b_val);
                 break;
-            case 3: // Reserved - default to ADD
+            case 3: // OR (bitwise)
+                result_extended = static_cast<int64_t>(a_val) | static_cast<int64_t>(b_val);
+                break;
+            case 4: // XOR (bitwise)
+                result_extended = static_cast<int64_t>(a_val) ^ static_cast<int64_t>(b_val);
+                break;
+            case 5: // LEFT SHIFT
+                result_extended = static_cast<int64_t>(a_val) << (b_val & 0x1F);  // Limit shift amount
+                break;
+            case 6: // RIGHT SHIFT (arithmetic for signed)
+                result_extended = static_cast<int64_t>(a_val) >> (b_val & 0x1F);  // Limit shift amount
+                break;
+            case 7: // Reserved - default to ADD
+            default:
+                is_arithmetic = true;
                 result_extended = static_cast<int64_t>(a_val) + static_cast<int64_t>(b_val);
                 break;
         }
         
-        // Check for overflow/underflow conditions
-        ov = (result_extended > MAX_VAL);
-        uf = (result_extended < MIN_VAL);
+        // Check for overflow/underflow conditions (only for arithmetic operations)
+        if (is_arithmetic)
+        {
+            ov = (result_extended > MAX_VAL);
+            uf = (result_extended < MIN_VAL);
+        }
         
         // Saturate result if overflow/underflow detected
         DataType saturated_result;
