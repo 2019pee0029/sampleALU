@@ -1,0 +1,41 @@
+# Build directories and files
+build/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+CTestTestfile.cmake
+Makefile
+*.ninja
+build.ninja
+
+# Executables and libraries
+*.exe
+*.out
+*.o
+*.a
+*.so
+*.dll
+*.dylib
+
+# IDE and editor files
+.vscode/
+.idea/
+*.code-workspace
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# SystemC related
+sc_simcontext.cpp
+sc_*.cpp
+
+# Dependency files
+*.d
+*.depend
+
+# CMake output
+*.cmake
+CMakeOutput.log
+CMakeError.log
